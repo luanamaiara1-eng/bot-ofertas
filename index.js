@@ -3,14 +3,14 @@ import fetch from "node-fetch";
 // 🚀 Função principal
 async function rodarBot() {
   try {
-    console.log("🔄 Iniciando nova busca...");
+    console.log("🔄 Buscando ofertas Shopee...");
 
     const termos = ["iphone", "nike", "smart tv", "geladeira"];
     const termo = termos[Math.floor(Math.random() * termos.length)];
 
     console.log("🧠 Buscando por:", termo);
 
-    const ofertas = await buscarOfertas(termo);
+    const ofertas = await buscarShopee(termo);
 
     if (!ofertas.length) {
       console.log("⚠️ Nenhuma oferta encontrada");
@@ -18,19 +18,18 @@ async function rodarBot() {
     }
 
     for (const produto of ofertas) {
-      const mensagem = gerarCopy(produto);
-      console.log(mensagem);
+      console.log(gerarCopy(produto));
     }
 
   } catch (error) {
-    console.log("❌ ERRO NO BOT:", error.message);
+    console.log("❌ ERRO:", error.message);
   }
 }
 
-// 🔎 Buscar produtos (SEM TOKEN e com proteção total)
-async function buscarOfertas(query) {
+// 🔎 Buscar produtos na Shopee
+async function buscarShopee(query) {
   try {
-    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}&limit=5`;
+    const url = `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${encodeURIComponent(query)}&limit=5&newest=0`;
 
     const res = await fetch(url, {
       headers: {
@@ -46,32 +45,37 @@ async function buscarOfertas(query) {
 
     const data = await res.json();
 
-    if (!data || !data.results || !Array.isArray(data.results)) {
-      console.log("⚠️ API respondeu diferente:", JSON.stringify(data));
+    if (!data || !data.items || !Array.isArray(data.items)) {
+      console.log("⚠️ Resposta inválida:", JSON.stringify(data));
       return [];
     }
 
-    console.log("📦 RESULTADOS:", data.results.length);
+    console.log("📦 RESULTADOS:", data.items.length);
 
-    return data.results.map(item => ({
-      titulo: item.title || "Sem título",
-      preco: item.price || 0,
-      link: item.permalink || "",
-      imagem: item.thumbnail || ""
-    }));
+    return data.items.map(item => {
+      const p = item.item_basic;
+
+      return {
+        titulo: p.name,
+        preco: p.price / 100000, // Shopee usa valor multiplicado
+        link: `https://shopee.com.br/product/${p.shopid}/${p.itemid}`,
+        imagem: `https://cf.shopee.com.br/file/${p.image}`
+      };
+    });
 
   } catch (error) {
     console.log("❌ ERRO NA BUSCA:", error.message);
     return [];
   }
 }
-// 💰 Gerador de copy (mensagem de venda)
+
+// 💰 Copy de venda
 function gerarCopy(produto) {
   return `
-🔥 OFERTA ENCONTRADA!
+🔥 OFERTA SHOPEE!
 
 🛍️ ${produto.titulo}
-💰 R$ ${produto.preco}
+💰 R$ ${produto.preco.toFixed(2)}
 
 👉 Compre aqui:
 ${produto.link}
@@ -80,8 +84,8 @@ ${produto.link}
 `;
 }
 
-// ⏱️ Executa a cada 30 minutos
+// ⏱️ roda a cada 30 min
 setInterval(rodarBot, 1000 * 60 * 30);
 
-// 🚀 Executa agora ao iniciar
+// 🚀 inicia agora
 rodarBot();
