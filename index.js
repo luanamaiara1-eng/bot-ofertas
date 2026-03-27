@@ -1,54 +1,76 @@
 import fetch from "node-fetch";
 
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
-
-
+// 🔥 Função principal
 async function rodarBot() {
-  console.log("Buscando ofertas...");
+  try {
+    console.log("🔎 Buscando ofertas...");
 
-  const ofertas = await buscarOfertas();
+    const termos = ["iphone", "nike", "smart tv", "geladeira"];
+    const termo = termos[Math.floor(Math.random() * termos.length)];
 
-  for (const produto of ofertas) {
-    console.log(gerarCopy(produto));
+    console.log("🧠 Buscando por:", termo);
+
+    const ofertas = await buscarOfertas(termo);
+
+    if (!ofertas.length) {
+      console.log("⚠️ Nenhuma oferta encontrada");
+      return;
+    }
+
+    for (const produto of ofertas) {
+      const mensagem = gerarCopy(produto);
+      console.log(mensagem);
+    }
+
+  } catch (error) {
+    console.log("❌ ERRO NO BOT:", error.message);
   }
 }
 
-setInterval(rodarBot, 1000 * 60 * 30);
-
-rodarBot();
-async function buscarOfertas() {
+// 🔎 Buscar produtos no Mercado Livre (SEM TOKEN)
+async function buscarOfertas(query) {
   try {
-    const res = await fetch(
-      "https://api.mercadolibre.com/sites/MLB/search?q=promoção&sort=price_asc",
-      {
-        headers: {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-        },
-      }
-    );
+    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}`;
 
+    const res = await fetch(url);
     const data = await res.json();
 
-    console.log("RESPOSTA COMPLETA:", data);
-    console.log("TOKEN:", ACCESS_TOKEN);
+    console.log("📦 RESULTADOS:", data.results?.length);
 
-    if (!data || !data.results) {
-      console.log("⚠️ API não retornou resultados");
+    if (!data.results || !Array.isArray(data.results)) {
       return [];
     }
 
-    const ofertas = data.results
-      .filter(
-        (item) =>
-          item.original_price &&
-          (item.original_price - item.price) / item.original_price > 0.3
-      )
-      .slice(0, 3);
-
-    return ofertas;
+    return data.results.slice(0, 5).map(item => ({
+      titulo: item.title,
+      preco: item.price,
+      link: item.permalink,
+      imagem: item.thumbnail
+    }));
 
   } catch (error) {
-    console.log("ERRO:", error);
+    console.log("❌ ERRO NA BUSCA:", error.message);
     return [];
   }
 }
+
+// 💰 Gerador de copy (texto de venda)
+function gerarCopy(produto) {
+  return `
+🔥 OFERTA ENCONTRADA!
+
+🛍️ ${produto.titulo}
+💰 R$ ${produto.preco}
+
+👉 Compre aqui:
+${produto.link}
+
+🚀 Corre que pode acabar!
+`;
+}
+
+// ⏱️ Executa a cada 30 minutos
+setInterval(rodarBot, 1000 * 60 * 30);
+
+// 🚀 Primeira execução imediata
+rodarBot();
