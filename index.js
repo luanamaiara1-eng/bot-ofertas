@@ -1,78 +1,69 @@
 import fetch from "node-fetch";
 
-async function rodarBot() {
-  try {
-    console.log("🔄 Buscando ofertas Shopee...");
-
-    const termos = ["iphone", "nike", "smart tv", "geladeira"];
-    const termo = termos[Math.floor(Math.random() * termos.length)];
-
-    console.log("🧠 Buscando por:", termo);
-
-    const ofertas = await buscarShopee(termo);
-
-    if (!ofertas.length) {
-      console.log("⚠️ Nenhuma oferta encontrada");
-      return;
-    }
-
-    for (const produto of ofertas) {
-      console.log(gerarCopy(produto));
-    }
-
-  } catch (error) {
-    console.log("❌ ERRO:", error.message);
-  }
-}
-
 async function buscarShopee(query) {
   try {
-    const url = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(
-  `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${query}&limit=5&newest=0`
-)}`;
+    const url = `https://shopee.com.br/search?keyword=${encodeURIComponent(query)}`;
 
-    const res = await fetch(url);
-
-    if (!res.ok) {
-      console.log("❌ ERRO HTTP:", res.status);
-      return [];
-    }
-
-    const data = await res.json();
-
-    if (!data || !data.items) {
-      console.log("⚠️ Resposta inválida:", data);
-      return [];
-    }
-
-    console.log("📦 RESULTADOS:", data.items.length);
-
-    return data.items.map(item => {
-      const p = item.item_basic;
-
-      return {
-        titulo: p.name,
-        preco: p.price / 100000,
-        link: `https://shopee.com.br/product/${p.shopid}/${p.itemid}`,
-      };
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
     });
 
-  } catch (error) {
-    console.log("❌ ERRO:", error.message);
+    const html = await res.text();
+
+    // Pega títulos dos produtos (forma simples)
+    const resultados = [...html.matchAll(/"name":"(.*?)"/g)];
+
+    if (!resultados.length) {
+      console.log("⚠️ Nenhum produto encontrado");
+      return [];
+    }
+
+    const produtos = resultados.slice(0, 5).map(r => ({
+      titulo: r[1].replace(/\\u0026/g, "&"),
+      link: url
+    }));
+
+    return produtos;
+
+  } catch (err) {
+    console.log("❌ ERRO:", err.message);
     return [];
   }
 }
 
 function gerarCopy(produto) {
   return `
-🔥 OFERTA!
+🔥 OFERTA ENCONTRADA!
 
-🛍️ ${produto.titulo}
-💰 R$ ${produto.preco.toFixed(2)}
+🛒 ${produto.titulo}
 
-👉 ${produto.link}
+👉 Confira aqui:
+${produto.link}
+
+💥 Corre que pode acabar!
 `;
 }
 
+async function rodarBot() {
+  console.log("🔎 Buscando ofertas...");
+
+  const termos = ["iphone", "smart tv", "fone bluetooth"];
+
+  for (const termo of termos) {
+    console.log(`📦 Buscando por: ${termo}`);
+
+    const produtos = await buscarShopee(termo);
+
+    for (const produto of produtos) {
+      console.log(gerarCopy(produto));
+    }
+  }
+}
+
+// roda a cada 30 min
 setInterval(rodarBot, 1000 * 60 * 30);
+
+// roda na hora também
 rodarBot();
