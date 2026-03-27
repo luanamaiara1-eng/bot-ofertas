@@ -32,7 +32,12 @@ async function buscarOfertas(query) {
   try {
     const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}`;
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      }
+    });
 
     if (!res.ok) {
       console.log("❌ ERRO HTTP:", res.status);
@@ -41,7 +46,6 @@ async function buscarOfertas(query) {
 
     const data = await res.json();
 
-    // 🔥 Proteção contra resposta inválida
     if (!data || !data.results || !Array.isArray(data.results)) {
       console.log("⚠️ API respondeu diferente:", JSON.stringify(data));
       return [];
