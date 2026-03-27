@@ -1,9 +1,9 @@
 import fetch from "node-fetch";
 
-// 🔥 Função principal
+// 🚀 Função principal
 async function rodarBot() {
   try {
-    console.log("🔎 Buscando ofertas...");
+    console.log("🔄 Iniciando nova busca...");
 
     const termos = ["iphone", "nike", "smart tv", "geladeira"];
     const termo = termos[Math.floor(Math.random() * termos.length)];
@@ -27,25 +27,33 @@ async function rodarBot() {
   }
 }
 
-// 🔎 Buscar produtos no Mercado Livre (SEM TOKEN)
+// 🔎 Buscar produtos (SEM TOKEN e com proteção total)
 async function buscarOfertas(query) {
   try {
     const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}`;
 
     const res = await fetch(url);
-    const data = await res.json();
 
-    console.log("📦 RESULTADOS:", data.results?.length);
-
-    if (!data.results || !Array.isArray(data.results)) {
+    if (!res.ok) {
+      console.log("❌ ERRO HTTP:", res.status);
       return [];
     }
 
+    const data = await res.json();
+
+    // 🔥 Proteção contra resposta inválida
+    if (!data || !data.results || !Array.isArray(data.results)) {
+      console.log("⚠️ API respondeu diferente:", JSON.stringify(data));
+      return [];
+    }
+
+    console.log("📦 RESULTADOS:", data.results.length);
+
     return data.results.slice(0, 5).map(item => ({
-      titulo: item.title,
-      preco: item.price,
-      link: item.permalink,
-      imagem: item.thumbnail
+      titulo: item.title || "Sem título",
+      preco: item.price || 0,
+      link: item.permalink || "",
+      imagem: item.thumbnail || ""
     }));
 
   } catch (error) {
@@ -54,7 +62,7 @@ async function buscarOfertas(query) {
   }
 }
 
-// 💰 Gerador de copy (texto de venda)
+// 💰 Gerador de copy (mensagem de venda)
 function gerarCopy(produto) {
   return `
 🔥 OFERTA ENCONTRADA!
@@ -72,5 +80,5 @@ ${produto.link}
 // ⏱️ Executa a cada 30 minutos
 setInterval(rodarBot, 1000 * 60 * 30);
 
-// 🚀 Primeira execução imediata
+// 🚀 Executa agora ao iniciar
 rodarBot();
