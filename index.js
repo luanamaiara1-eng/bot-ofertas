@@ -13,12 +13,13 @@ async function buscarShopee(query) {
     const html = await res.text();
 
     // Pega títulos dos produtos (forma simples)
-    const resultados = [...html.matchAll(/"name":"(.*?)"/g)];
-
-    if (!resultados.length) {
-      console.log("⚠️ Nenhum produto encontrado");
-      return [];
-    }
+   const resultados = [...html.matchAll(/"name":"(.*?)","/g)]
+  .map(r => r[1])
+  .filter(nome =>
+    nome.length > 20 &&
+    !nome.toLowerCase().includes("shopee") &&
+    !nome.toLowerCase().includes("login")
+  );
 
     const produtos = resultados.slice(0, 5).map(r => ({
       titulo: r[1].replace(/\\u0026/g, "&"),
