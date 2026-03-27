@@ -1,6 +1,5 @@
 import fetch from "node-fetch";
 
-// 🚀 Função principal
 async function rodarBot() {
   try {
     console.log("🔄 Buscando ofertas Shopee...");
@@ -26,17 +25,13 @@ async function rodarBot() {
   }
 }
 
-// 🔎 Buscar produtos na Shopee
 async function buscarShopee(query) {
   try {
-    const url = `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${encodeURIComponent(query)}&limit=5&newest=0`;
+    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+      `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${query}&limit=5&newest=0`
+    )}`;
 
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json"
-      }
-    });
+    const res = await fetch(url);
 
     if (!res.ok) {
       console.log("❌ ERRO HTTP:", res.status);
@@ -45,8 +40,8 @@ async function buscarShopee(query) {
 
     const data = await res.json();
 
-    if (!data || !data.items || !Array.isArray(data.items)) {
-      console.log("⚠️ Resposta inválida:", JSON.stringify(data));
+    if (!data || !data.items) {
+      console.log("⚠️ Resposta inválida:", data);
       return [];
     }
 
@@ -57,35 +52,27 @@ async function buscarShopee(query) {
 
       return {
         titulo: p.name,
-        preco: p.price / 100000, // Shopee usa valor multiplicado
+        preco: p.price / 100000,
         link: `https://shopee.com.br/product/${p.shopid}/${p.itemid}`,
-        imagem: `https://cf.shopee.com.br/file/${p.image}`
       };
     });
 
   } catch (error) {
-    console.log("❌ ERRO NA BUSCA:", error.message);
+    console.log("❌ ERRO:", error.message);
     return [];
   }
 }
 
-// 💰 Copy de venda
 function gerarCopy(produto) {
   return `
-🔥 OFERTA SHOPEE!
+🔥 OFERTA!
 
 🛍️ ${produto.titulo}
 💰 R$ ${produto.preco.toFixed(2)}
 
-👉 Compre aqui:
-${produto.link}
-
-🚀 Corre que pode acabar!
+👉 ${produto.link}
 `;
 }
 
-// ⏱️ roda a cada 30 min
 setInterval(rodarBot, 1000 * 60 * 30);
-
-// 🚀 inicia agora
 rodarBot();
