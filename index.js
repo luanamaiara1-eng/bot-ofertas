@@ -27,9 +27,9 @@ async function rodarBot() {
 
 async function buscarShopee(query) {
   try {
-    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-      `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${query}&limit=5&newest=0`
-    )}`;
+    const url = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(
+  `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${query}&limit=5&newest=0`
+)}`;
 
     const res = await fetch(url);
 
