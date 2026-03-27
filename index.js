@@ -65,7 +65,6 @@ async function buscarOfertas(query) {
     return [];
   }
 }
-
 // 💰 Gerador de copy (mensagem de venda)
 function gerarCopy(produto) {
   return `
