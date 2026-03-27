@@ -30,7 +30,7 @@ async function rodarBot() {
 // 🔎 Buscar produtos (SEM TOKEN e com proteção total)
 async function buscarOfertas(query) {
   try {
-    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}`;
+    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${query}&limit=5`;
 
     const res = await fetch(url, {
       headers: {
@@ -53,7 +53,7 @@ async function buscarOfertas(query) {
 
     console.log("📦 RESULTADOS:", data.results.length);
 
-    return data.results.slice(0, 5).map(item => ({
+    return data.results.map(item => ({
       titulo: item.title || "Sem título",
       preco: item.price || 0,
       link: item.permalink || "",
