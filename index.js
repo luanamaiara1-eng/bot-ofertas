@@ -1,4 +1,8 @@
+import express from "express";
 import fetch from "node-fetch";
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 async function buscarShopee(query) {
   try {
@@ -12,59 +16,39 @@ async function buscarShopee(query) {
 
     const html = await res.text();
 
-    // Pega títulos dos produtos (forma simples)
-   const resultados = [...html.matchAll(/"name":"(.*?)","/g)]
-  .map(r => r[1])
-  .filter(nome =>
-    nome.length > 20 &&
-    !nome.toLowerCase().includes("shopee") &&
-    !nome.toLowerCase().includes("login")
-  );
+    const resultados = [...html.matchAll(/"name":"(.*?)","/g)]
+      .map(r => r[1])
+      .filter(nome =>
+        nome.length > 20 &&
+        !nome.toLowerCase().includes("shopee") &&
+        !nome.toLowerCase().includes("login")
+      );
 
-    const produtos = resultados.slice(0, 5).map(r => ({
-      titulo: r[1].replace(/\\u0026/g, "&"),
+    return resultados.slice(0, 5).map(nome => ({
+      titulo: nome.substring(0, 80),
       link: url
     }));
 
-    return produtos;
-
   } catch (err) {
-    console.log("❌ ERRO:", err.message);
+    console.log("ERRO:", err.message);
     return [];
   }
 }
 
-function gerarCopy(produto) {
-  return `
-🔥 OFERTA ENCONTRADA!
+// 🔥 CRIA A API
+app.get("/ofertas", async (req, res) => {
+  const query = req.query.q || "iphone";
 
-🛒 ${produto.titulo}
+  const produtos = await buscarShopee(query);
 
-👉 Confira aqui:
-${produto.link}
+  res.json({
+    sucesso: true,
+    total: produtos.length,
+    produtos
+  });
+});
 
-💥 Corre que pode acabar!
-`;
-}
-
-async function rodarBot() {
-  console.log("🔎 Buscando ofertas...");
-
-  const termos = ["iphone", "smart tv", "fone bluetooth"];
-
-  for (const termo of termos) {
-    console.log(`📦 Buscando por: ${termo}`);
-
-    const produtos = await buscarShopee(termo);
-
-    for (const produto of produtos) {
-      console.log(gerarCopy(produto));
-    }
-  }
-}
-
-// roda a cada 30 min
-setInterval(rodarBot, 1000 * 60 * 30);
-
-// roda na hora também
-rodarBot();
+// 🔥 INICIA O SERVIDOR
+app.listen(PORT, () => {
+  console.log(`🚀 API rodando na porta ${PORT}`);
+});
