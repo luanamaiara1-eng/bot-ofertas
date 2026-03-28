@@ -2,89 +2,79 @@ import express from "express";
 import fetch from "node-fetch";
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
-/*
-  Função para buscar ofertas reais
-*/
-async function buscarOfertas(query = "iphone") {
+async function buscarShopee(query) {
   try {
-    console.log(`🔎 Buscando ofertas por: ${query}`);
+    const url = `https://shopee.com.br/search?keyword=${encodeURIComponent(query)}`;
 
-    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "pt-BR,pt;q=0.9"
+      }
+    });
 
-    const response = await fetch(url);
+    const html = await res.text();
 
-    if (!response.ok) {
-      throw new Error(`Erro HTTP ${response.status}`);
-    }
+    // pega nomes dos produtos
+    const nomes = [...html.matchAll(/"name":"(.*?)"/g)].map(r => r[1]);
 
-    const data = await response.json();
+    // pega preços
+    const precos = [...html.matchAll(/"price":(\d+)/g)].map(r => r[1]);
 
-    if (!data.results || data.results.length === 0) {
-      return [];
-    }
+    // pega imagens
+    const imagens = [...html.matchAll(/"image":"(.*?)"/g)].map(r => r[1]);
 
-    const ofertas = data.results.map((item) => ({
-      titulo: item.title,
-      preco: item.price,
-      precoOriginal: item.original_price || item.price,
-      imagem: item.thumbnail,
-      link: item.permalink,
-      desconto:
-        item.original_price && item.original_price > item.price
-          ? Math.round(
-              ((item.original_price - item.price) /
-                item.original_price) *
-                100
-            )
-          : 0,
-    }));
+    const produtos = nomes
+      .slice(0, 5)
+      .map((nome, i) => ({
+        titulo: nome.substring(0, 80),
+        preco: precos[i]
+          ? `R$ ${(Number(precos[i]) / 100000).toFixed(2)}`
+          : "Preço indisponível",
+        imagem: imagens[i]
+          ? imagens[i].replace(/\\u002F/g, "/")
+          : null,
+        link: url
+      }))
+      .filter(p => p.titulo.length > 5);
 
-    return ofertas;
-  } catch (error) {
-    console.error("❌ ERRO:", error.message);
+    return produtos;
+  } catch (err) {
+    console.log("ERRO:", err.message);
     return [];
   }
 }
 
-/*
-  Encontrar a melhor promoção
-*/
-function melhorOferta(ofertas) {
-  if (!ofertas.length) return null;
+// melhor oferta = menor preço válido
+function melhorOferta(produtos) {
+  const validos = produtos.filter(p => p.preco !== "Preço indisponível");
 
-  return ofertas.sort((a, b) => {
-    if (b.desconto !== a.desconto) {
-      return b.desconto - a.desconto;
-    }
+  if (!validos.length) return null;
 
-    return a.preco - b.preco;
+  return validos.sort((a, b) => {
+    const pa = Number(a.preco.replace(/[^\d,]/g, "").replace(",", "."));
+    const pb = Number(b.preco.replace(/[^\d,]/g, "").replace(",", "."));
+    return pa - pb;
   })[0];
 }
 
-/*
-  Endpoint API
-*/
+// API
 app.get("/ofertas", async (req, res) => {
   const query = req.query.q || "iphone";
 
-  const ofertas = await buscarOfertas(query);
-
-  const melhor = melhorOferta(ofertas);
+  const produtos = await buscarShopee(query);
+  const melhor = melhorOferta(produtos);
 
   res.json({
     sucesso: true,
-    busca: query,
-    total: ofertas.length,
+    total: produtos.length,
     melhorOferta: melhor,
-    ofertas,
+    produtos
   });
 });
 
-/*
-  Rodar servidor
-*/
 app.listen(PORT, () => {
   console.log(`🚀 API rodando na porta ${PORT}`);
 });
